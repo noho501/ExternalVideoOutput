@@ -15,7 +15,7 @@ final class MetalRenderer {
 
     // MARK: - State
 
-    private(set) var contentMode: ExternalVideoContentMode
+    internal(set) var contentMode: ExternalVideoContentMode
     private var displayLink: CADisplayLink?
 
     /// The latest frame to render. Atomic swap via lock.
