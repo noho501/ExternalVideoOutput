@@ -93,15 +93,46 @@ final class MetalRenderer {
         guard let drawable = metalLayer.nextDrawable() else { return }
 
         let drawableSize = metalLayer.drawableSize
-        let destRect = destinationRect(for: image.extent, in: drawableSize)
+        let drawableRect = CGRect(origin: .zero, size: drawableSize)
+        let renderImage: CIImage
+        if image.extent.width > 0, image.extent.height > 0 {
+            let destRect = destinationRect(for: image.extent, in: drawableSize)
+            let scaleX = destRect.width / image.extent.width
+            let scaleY = destRect.height / image.extent.height
+            renderImage = image.transformed(by: CGAffineTransform(
+                a: scaleX,
+                b: 0,
+                c: 0,
+                d: scaleY,
+                tx: destRect.minX - image.extent.minX * scaleX,
+                ty: destRect.minY - image.extent.minY * scaleY
+            ))
+        } else {
+            renderImage = image
+        }
 
         guard let commandBuffer = commandQueue.makeCommandBuffer() else { return }
 
+        let clearPass = MTLRenderPassDescriptor()
+        clearPass.colorAttachments[0].texture = drawable.texture
+        clearPass.colorAttachments[0].loadAction = .clear
+        clearPass.colorAttachments[0].storeAction = .store
+        clearPass.colorAttachments[0].clearColor = MTLClearColor(
+            red: 0,
+            green: 0,
+            blue: 0,
+            alpha: 1
+        )
+        guard let clearEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: clearPass) else {
+            return
+        }
+        clearEncoder.endEncoding()
+
         ciContext.render(
-            image,
+            renderImage,
             to: drawable.texture,
             commandBuffer: commandBuffer,
-            bounds: CGRect(origin: .zero, size: drawableSize),
+            bounds: drawableRect,
             colorSpace: CGColorSpaceCreateDeviceRGB()
         )
 
